@@ -13,16 +13,13 @@ geo = json.loads((SRC / 'lka.geo.json').read_text())
 ring = geo['features'][0]['geometry']['coordinates'][0]
 island = 'M' + ' L'.join(f'{x:.1f} {y:.1f}' for x, y in (proj(*p) for p in ring)) + 'Z'
 
-# zastávky ukázkového programu (lon, lat, popisek, zarovnání popisku)
+# zastávky zájezdu 29. 8.–15. 9. 2027 (lon, lat, popisek, zarovnání popisku); poslední = návrat do Colomba
 stops = [
-    (79.84, 7.21, 'Negombo', 'l'),
-    (80.76, 7.957, 'Sigiriya', 'r'),
-    (80.636, 7.29, 'Kandy', 'l'),
-    (80.78, 6.97, 'Nuwara Eliya', 'l'),
-    (81.05, 6.87, 'Ella', 'r'),
-    (81.40, 6.37, 'Yala', 'r'),
-    (80.47, 5.95, 'Mirissa', 'r'),
+    (79.88, 7.18, 'Colombo', 'l'),
     (80.22, 6.03, 'Galle', 'l'),
+    (80.83, 6.05, 'Rekawa', 'r'),
+    (81.05, 6.87, 'Ella', 'r'),
+    (79.88, 7.18, '', 'l'),
 ]
 pts = [proj(lon, lat) for lon, lat, *_ in stops]
 
@@ -37,18 +34,20 @@ def smooth(p, t=0.5):
         d += f' C{c1[0]:.1f} {c1[1]:.1f} {c2[0]:.1f} {c2[1]:.1f} {p2[0]:.1f} {p2[1]:.1f}'
     return d
 
-# odlet na Maledivy — oblouk z Galle přes Colombo mimo mapu vlevo dolů
-gx, gy = pts[-1]
-flight = f'M{gx:.1f} {gy:.1f} C{gx - 40:.1f} {gy + 20:.1f} {gx - 110:.1f} {gy + 10:.1f} {-10:.1f} {gy + 60:.1f}'
-
+# přílet z Malediv — oblouk zpoza mapy vlevo dole do Colomba
+cx, cy = pts[0]
+flight = f'M{-10:.1f} {cy + 150:.1f} C{20:.1f} {cy + 110:.1f} {cx - 40:.1f} {cy + 50:.1f} {cx:.1f} {cy:.1f}'
 dots = ''
 for i, ((x, y), (_, _, name, side)) in enumerate(zip(pts, stops)):
     tx, anchor = (x + 12, 'start') if side == 'r' else (x - 12, 'end')
+    if not name:
+        dots += f'<g class="stop" data-stop="{i}"><circle class="stop-halo" cx="{x:.1f}" cy="{y:.1f}" r="11"/></g>'
+        continue
     dots += (f'<g class="stop" data-stop="{i}"><circle class="stop-halo" cx="{x:.1f}" cy="{y:.1f}" r="11"/>'
              f'<circle class="stop-dot" cx="{x:.1f}" cy="{y:.1f}" r="4.5"/>'
              f'<text x="{tx:.1f}" y="{y + 4:.1f}" text-anchor="{anchor}">{name}</text></g>')
 
-svg = f'''<svg class="map-svg" viewBox="-20 -10 340 500" role="img" aria-label="Mapa Srí Lanky s trasou ukázkového zájezdu">
+svg = f'''<svg class="map-svg" viewBox="-20 -10 340 500" role="img" aria-label="Mapa Srí Lanky s trasou zájezdu 2027">
       <defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="6" class="hatch"/></pattern></defs>
       <path class="island-shadow" d="{island}" transform="translate(5 7)"/>
       <path class="island" d="{island}"/>
@@ -57,7 +56,7 @@ svg = f'''<svg class="map-svg" viewBox="-20 -10 340 500" role="img" aria-label="
       <path class="route" id="route" d="{smooth(pts)}" pathLength="1000"/>
       <path class="flight" id="flight" d="{flight}" pathLength="100"/>
       {dots}
-      <g class="plane-to-mle"><text x="-6" y="{gy + 84:.1f}">→ Malé, Maledivy</text></g>
+      <g class="plane-to-mle"><text x="-6" y="{cy + 172:.1f}">Malé, Maledivy ↗</text></g>
       <g class="compass" transform="translate(292 30)"><circle r="16"/><path d="M0 -12 L4 0 L0 12 L-4 0Z"/><text y="-20" text-anchor="middle">N</text></g>
     </svg>'''
 

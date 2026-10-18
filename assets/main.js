@@ -57,29 +57,28 @@
     const stops = [...svg.querySelectorAll('.stop')];
     const L = route.getTotalLength();
     // délka trasy k jednotlivým zastávkám (hledání nejbližšího bodu na křivce)
+    // délka trasy k jednotlivým zastávkám (nejbližší bod na křivce, hledá se dál od předchozí zastávky — trasa končí tam, kde začala)
+    let from = 0;
     const stopLen = stops.map(g => {
-      const c = g.querySelector('.stop-dot');
+      const c = g.querySelector('.stop-halo');
       const sx = +c.getAttribute('cx'), sy = +c.getAttribute('cy');
-      let best = 0, bestD = Infinity;
-      for (let l = 0; l <= L; l += 2) {
+      let best = from, bestD = Infinity;
+      for (let l = from; l <= L; l += 2) {
         const p = route.getPointAtLength(l);
         const d = (p.x - sx) ** 2 + (p.y - sy) ** 2;
         if (d < bestD) { bestD = d; best = l; }
       }
+      from = best + 20;
       return best / L * 1000;
     });
+    // 'mal' = Maledivy (před příletem do Colomba), čísla = zastávky na Srí Lance
     const setStep = key => {
-      const flight = key === 'flight';
-      const idx = flight ? stops.length - 1 : +key;
-      svg.style.setProperty('--route-off', (1000 - stopLen[idx]).toFixed(1));
-      svg.style.setProperty('--flight-off', flight ? 0 : 100);
-      svg.classList.toggle('fly', flight);
-      stops.forEach((s, i) => { s.classList.toggle('on', i <= idx); s.classList.toggle('cur', i === idx && !flight); });
-      days.forEach(d => {
-        const k = d.dataset.stop;
-        const di = k === 'flight' ? stops.length : +k;
-        d.classList.toggle('on', di <= (flight ? stops.length : idx));
-      });
+      const idx = key === 'mal' ? -1 : +key;
+      svg.style.setProperty('--route-off', idx < 0 ? 1000 : (1000 - stopLen[idx]).toFixed(1));
+      svg.style.setProperty('--flight-off', idx < 0 ? 100 : 0);
+      svg.classList.toggle('fly', idx < 0);
+      stops.forEach((s, i) => { s.classList.toggle('on', i <= idx); s.classList.toggle('cur', i === idx); });
+      days.forEach(d => d.classList.toggle('on', (d.dataset.stop === 'mal' ? -1 : +d.dataset.stop) <= idx));
     };
     const dayIO = new IntersectionObserver(entries => entries.forEach(e => {
       if (e.isIntersecting) setStep(e.target.dataset.stop);
